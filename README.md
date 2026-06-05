@@ -86,6 +86,38 @@ uv run transcript-to-podcast examples/sample-dialogue.md -o /tmp/sample.mp3
 2. Synthesize each turn with its speaker's voice via edge-tts (concurrent, with retry).
 3. Stitch the clips with short silences into one MP3 via `ffmpeg`.
 
+## Repository layout
+
+```
+transcript-to-podcast/
+├── src/transcript_to_podcast/   # CLI package: cli.py (args) + core.py (parse → synth → stitch)
+├── skill/SKILL.md               # bundled agent skill that wraps this CLI
+├── examples/sample-dialogue.md  # tiny smoke-test transcript
+├── pyproject.toml, uv.lock      # uv-managed deps, Python ≥ 3.10
+└── README.md
+```
+
+## Bundled skill
+
+`skill/SKILL.md` is an agent skill (Claude Code / compatible agents) that documents
+how to drive this CLI. It is the single source of truth, installed into agent skill
+folders as **gitignored symlinks** back to this repo — so editing it updates every
+install, and the skill is correctly absent anywhere this repo isn't checked out.
+Example (Zettelkasten vault):
+
+```bash
+ln -s "$PWD/skill" /path/to/vault/.claude/skills/transcript-to-podcast
+ln -s "$PWD/skill" /path/to/vault/.agents/skills/transcript-to-podcast
+```
+
+### Where transcripts live
+
+Generated transcripts for the two-host **Socrates** series are organized in the
+vault under `Socrates-podcasts/` — a dedicated folder holding one markdown file per
+episode, each linked back from its source literature note. The rendered MP3s are
+kept outside the git-synced vault (e.g. `~/Downloads/`) so audio binaries don't
+bloat the repo.
+
 ## License
 
 MIT

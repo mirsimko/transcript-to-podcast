@@ -96,7 +96,8 @@ The zettelkasten vault auto-syncs to GitHub every 15 minutes; a ~10–20 MB audi
 binary does not belong in it. Write the MP3 to `~/Downloads/` (on this machine
 `~/Downloads` is symlinked to the Windows Downloads folder, so it opens with a
 double-click), or another location outside the git repo. Only the transcript
-markdown belongs in the vault.
+markdown belongs in the vault — keep generated transcripts together under
+`Socrates-podcasts/` (one file per episode), each linked from its source note.
 
 ## Tuning
 
@@ -118,7 +119,7 @@ Convert the vault's CV-engineer podcast transcript:
 
 ```bash
 uv run --project /home/miro/dev/transcript-to-podcast transcript-to-podcast \
-  "/mnt/c/Users/mirsi/OneDrive/Dokumenty/miro_vault/zettelkasten/Literature notes/2026-06-05 Towards end-to-end automation of AI research — CV podcast transcript.md" \
+  "/mnt/c/Users/mirsi/OneDrive/Dokumenty/miro_vault/zettelkasten/Socrates-podcasts/2026-06-05 Towards end-to-end automation of AI research — CV podcast transcript.md" \
   -o ~/Downloads/ai-scientist-cv-podcast.mp3 \
   --voice Maya=en-US-AvaNeural --voice Theo=en-US-AndrewNeural
 ```
