@@ -2,7 +2,7 @@
 name: transcript-to-podcast
 description: >-
   Convert a markdown dialogue/transcript into a multi-voice MP3 podcast — one
-  distinct neural voice per speaker — using the local transcript-to-podcast CLI
+  distinct neural voice per speaker — using the transcript-to-podcast CLI
   (edge-tts + ffmpeg). Use this WHENEVER the user wants to turn a transcript,
   script, dialogue, interview, or two-host/conversational notes into audio they
   can listen to: "make a podcast from this transcript", "turn these notes into
@@ -20,32 +20,41 @@ description: >-
 Turn a markdown **dialogue transcript** (speaker turns marked with bold labels)
 into a single **multi-voice MP3** — each speaker gets their own neural voice, the
 labels/timestamps/markdown are stripped so they are never spoken, and short
-pauses are inserted between turns. The result is a real file the user can drop on
-their phone.
+pauses are inserted between turns. The result is a portable audio file.
 
-The actual logic lives in the **uv project this skill ships with**, at
-`/home/miro/dev/transcript-to-podcast` (this `SKILL.md` is bundled in that repo
-under `skill/`; the vault installs are gitignored symlinks back to it). This skill
-is a thin wrapper: it tells you how to drive that CLI well. Don't reimplement TTS
-inline — call the tool.
+The logic lives in the **`transcript-to-podcast` uv project** that this skill is
+bundled in. This skill is a thin wrapper: locate the CLI, then drive it. Don't
+reimplement TTS inline — call the tool.
 
 ## Why this beats "just read it aloud"
 
 A two-host transcript read by one voice stops sounding like a conversation, and
 the engine ends up speaking "Maya colon", "open bracket zero zero", etc. This
 tool assigns a contrasting voice per speaker, removes all the scaffolding, and
-produces a portable MP3. That is almost always what the user actually wants when
-they say "podcast".
+produces a portable MP3 — almost always what the user actually wants when they
+say "podcast".
 
-## Prerequisites (check before running)
+## Locating the CLI
 
-- The uv project exists at `/home/miro/dev/transcript-to-podcast`. If it is
-  missing, it can be recreated with `uv init --package` + `uv add edge-tts`, but
-  normally it is already there.
-- `ffmpeg` and `ffprobe` are on `PATH` (used to stitch clips). `sudo apt install
-  ffmpeg` if not.
-- Network access — edge-tts streams from Microsoft's free neural-voice service
-  (no API key needed).
+This `SKILL.md` ships inside the project at `skill/SKILL.md`, so the **uv project
+root is the parent of this skill's directory**. Installs are usually **symlinks**
+to that `skill/` folder, so resolve symlinks first. From the directory this skill
+loaded from (the harness tells you that path):
+
+```bash
+# SKILL_DIR = the directory containing this SKILL.md (given to you on skill load)
+PROJECT="$(cd "$(dirname "$(readlink -f "$SKILL_DIR/SKILL.md")")/.." && pwd)"
+```
+
+Run every command as `uv run --project "$PROJECT" transcript-to-podcast …`.
+(Or install it once with `uv tool install "$PROJECT"`, then call
+`transcript-to-podcast` directly from anywhere.)
+
+## Prerequisites
+
+- `uv` (https://docs.astral.sh/uv/) — runs the project with its locked deps/venv.
+- `ffmpeg` and `ffprobe` on `PATH` — used to stitch the clips. `sudo apt install ffmpeg`.
+- Network access — edge-tts streams from Microsoft's free neural-voice service (no API key).
 
 ## Transcript format
 
@@ -57,47 +66,38 @@ A "turn" is any paragraph that starts with a **bold speaker label**:
 ```
 
 Everything else (front-matter, `#` headings, `[00:00]` timestamps, `>` callouts,
-a trailing `## Related notes` section, etc.) is ignored. A label only counts as a
-speaker if it is passed via `--voice` **or** it recurs (≥ 2 turns), so one-off
-header lines like `**Source paper:**` or `**Hosts:**` are correctly skipped.
+trailing link sections, etc.) is ignored. A label only counts as a speaker if it
+is passed via `--voice` **or** it recurs (≥ 2 turns), so one-off header lines like
+`**Source:**` or `**Hosts:**` are correctly skipped.
 
-## How to run it
+## Workflow
 
-Always invoke through uv so the locked deps/venv are used. `--project` lets you
-run from any directory:
+1. **Dry-run first** to confirm the parse — turns, speakers, word count / rough
+   minutes — with no network calls:
+   ```bash
+   uv run --project "$PROJECT" transcript-to-podcast "<transcript.md>" --dry-run
+   ```
+   If a header label leaks in as a speaker, pin the real speakers with
+   `--voice NAME=VOICE` to switch detection to strict mode.
+2. **Pick voices.** A contrasting female/male pair reads best for two hosts; good
+   defaults are `en-US-AvaNeural` + `en-US-AndrewNeural` (natural conversational
+   voices). Unmapped speakers are auto-assigned distinct pool voices, so you can
+   omit `--voice` and still get different voices. Browse with `--list-voices`.
+3. **Synthesize** to an MP3 with `-o <output.mp3>` (any path you choose).
+4. **Report** the output path and duration back to the user.
 
 ```bash
-uv run --project /home/miro/dev/transcript-to-podcast transcript-to-podcast \
-  "<path/to/transcript.md>" -o "<path/to/output.mp3>" \
+uv run --project "$PROJECT" transcript-to-podcast "<transcript.md>" \
+  -o "<output.mp3>" \
   --voice Maya=en-US-AvaNeural --voice Theo=en-US-AndrewNeural
 ```
 
-### Recommended workflow
+## Where to write the MP3
 
-1. **Dry-run first** to confirm the parse — how many turns, which speakers, the
-   word count / rough minutes — without any network calls:
-   ```bash
-   uv run --project /home/miro/dev/transcript-to-podcast transcript-to-podcast \
-     "<transcript.md>" --dry-run
-   ```
-   If the speaker list looks wrong (e.g. a header label leaked in), pin the real
-   speakers explicitly with `--voice NAME=VOICE` so detection is strict.
-2. **Pick voices.** For a 2-host show, a contrasting female/male pair reads best.
-   Good defaults: `en-US-AvaNeural` + `en-US-AndrewNeural` (Microsoft's most
-   natural conversational voices). Unmapped speakers are auto-assigned distinct
-   pool voices, so you can skip `--voice` and still get two different voices.
-   Browse options with `--list-voices` (filter `en-US`).
-3. **Synthesize** to an MP3 with `-o`.
-4. **Report** the output path and duration back to the user.
-
-### Output location — do NOT write the MP3 into the vault
-
-The zettelkasten vault auto-syncs to GitHub every 15 minutes; a ~10–20 MB audio
-binary does not belong in it. Write the MP3 to `~/Downloads/` (on this machine
-`~/Downloads` is symlinked to the Windows Downloads folder, so it opens with a
-double-click), or another location outside the git repo. Only the transcript
-markdown belongs in the vault — keep generated transcripts together under
-`Socrates-podcasts/` (one file per episode), each linked from its source note.
+Audio is large (~1 MB per minute). If the current workspace is a git repo you
+don't want to bloat with binaries, write the MP3 **outside** it (e.g. a downloads
+or build/output directory) and keep only the markdown transcript under version
+control. Pass any destination with `-o`.
 
 ## Tuning
 
@@ -110,18 +110,15 @@ markdown belongs in the vault — keep generated transcripts together under
 | Keep per-turn clips to debug | `--keep-clips` |
 
 Rough pacing: edge-tts at default rate runs ~150 wpm, so ~2,700 spoken words ≈
-18 min. To hit a target length, estimate from the dry-run word count and nudge
-`--rate`.
+18 min. Estimate from the dry-run word count and nudge `--rate` to hit a target.
 
-## Worked example
+## Smoke test
 
-Convert the vault's CV-engineer podcast transcript:
+The project ships a tiny example transcript:
 
 ```bash
-uv run --project /home/miro/dev/transcript-to-podcast transcript-to-podcast \
-  "/mnt/c/Users/mirsi/OneDrive/Dokumenty/miro_vault/zettelkasten/Socrates-podcasts/2026-06-05 Towards end-to-end automation of AI research — CV podcast transcript.md" \
-  -o ~/Downloads/ai-scientist-cv-podcast.mp3 \
-  --voice Maya=en-US-AvaNeural --voice Theo=en-US-AndrewNeural
+uv run --project "$PROJECT" transcript-to-podcast \
+  "$PROJECT/examples/sample-dialogue.md" -o /tmp/sample.mp3
 ```
 
 ## Troubleshooting
@@ -131,7 +128,6 @@ uv run --project /home/miro/dev/transcript-to-podcast transcript-to-podcast \
   `--voice NAME=VOICE` so that name is treated as a speaker.
 - **A header line shows up as a speaker in `--dry-run`** — pass the real speakers
   via `--voice` to switch detection to strict mode.
-- **ffmpeg/ffprobe not found** — install ffmpeg; it's a system dependency, not a
-  pip package.
-- **Mispronounced acronyms** (e.g. "GPT-4o", "o4-mini") — minor; if it matters,
-  edit the transcript to a phonetic spelling for that line, then re-run.
+- **ffmpeg/ffprobe not found** — install ffmpeg; it's a system dependency, not pip.
+- **Mispronounced acronyms** (e.g. "GPT-4o", "o4-mini") — minor; edit that line in
+  the transcript to a phonetic spelling and re-run.
