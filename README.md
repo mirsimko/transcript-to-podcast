@@ -26,6 +26,41 @@ uv sync                 # create .venv and install locked deps
 uv run transcript-to-podcast --help
 ```
 
+### Install as a CLI tool
+
+To get a `transcript-to-podcast` command on your `PATH` (callable from any
+directory, no `uv run` prefix), install it as a [uv tool](https://docs.astral.sh/uv/concepts/tools/).
+
+Don't have uv? Install it first (one line, no Python needed):
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh      # macOS / Linux
+# or: pipx install uv  •  brew install uv  •  see https://docs.astral.sh/uv/
+```
+
+Then install the tool:
+
+```bash
+uv tool install .                 # from the repo root
+uv tool install <git-url>         # or straight from the remote, anywhere
+
+transcript-to-podcast --help      # now on PATH (~/.local/bin)
+```
+
+If `~/.local/bin` isn't on your `PATH` yet, run `uv tool update-shell` once.
+After changing the code, reinstall with `uv tool install . --reinstall` (or use
+`uv tool install -e .` for an editable install that tracks source edits).
+
+**No uv at all?** It's a standard Python package, so the usual tools work too:
+
+```bash
+pipx install .                    # isolated, puts it on PATH (recommended)
+pip install --user .              # or a plain user install
+```
+
+Either way, the `ffmpeg`/`ffprobe` requirement still applies — these installers
+handle the Python deps, not system binaries.
+
 ## Transcript format
 
 A "turn" is any paragraph starting with a **bold speaker label**:
@@ -106,17 +141,16 @@ install, and the skill is correctly absent anywhere this repo isn't checked out.
 Example (Zettelkasten vault):
 
 ```bash
-ln -s "$PWD/skill" /path/to/vault/.claude/skills/transcript-to-podcast
-ln -s "$PWD/skill" /path/to/vault/.agents/skills/transcript-to-podcast
+ln -s "$PWD/skill" /path/to/vault/.claude/skills/podcast-from-transcript
+ln -s "$PWD/skill" /path/to/vault/.agents/skills/podcast-from-transcript
 ```
 
-### Where transcripts live
+### Suggested workflow
 
-Generated transcripts for the two-host **Socrates** series are organized in the
-vault under `Socrates-podcasts/` — a dedicated folder holding one markdown file per
-episode, each linked back from its source literature note. The rendered MP3s are
-kept outside the git-synced vault (e.g. `~/Downloads/`) so audio binaries don't
-bloat the repo.
+Keep the **markdown transcripts** under version control (one file per episode) and
+write the rendered **MP3s outside** the repo — e.g. a `build/` or other output
+directory that's gitignored — so audio binaries don't bloat git history. Audio runs
+~1 MB/minute, so a handful of episodes adds up fast.
 
 ## License
 

@@ -1,5 +1,5 @@
 ---
-name: transcript-to-podcast
+name: podcast-from-transcript
 description: >-
   Convert a markdown dialogue/transcript into a multi-voice MP3 podcast — one
   distinct neural voice per speaker — using the transcript-to-podcast CLI
@@ -15,7 +15,7 @@ description: >-
   multi-voice narration, listen to a note/transcript/script.
 ---
 
-# transcript-to-podcast
+# podcast-from-transcript
 
 Turn a markdown **dialogue transcript** (speaker turns marked with bold labels)
 into a single **multi-voice MP3** — each speaker gets their own neural voice, the
