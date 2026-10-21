@@ -129,5 +129,9 @@ uv run --project "$PROJECT" transcript-to-podcast \
 - **A header line shows up as a speaker in `--dry-run`** — pass the real speakers
   via `--voice` to switch detection to strict mode.
 - **ffmpeg/ffprobe not found** — install ffmpeg; it's a system dependency, not pip.
+- **HTTP 403 from `speech.platform.bing.com`** — edge-tts is too old for
+  Microsoft's current token check. Upgrade it (`uv lock --upgrade-package
+  edge-tts && uv sync` in the repo), then reinstall the tool with
+  `uv tool install <repo> --reinstall`.
 - **Mispronounced acronyms** (e.g. "GPT-4o", "o4-mini") — minor; edit that line in
   the transcript to a phonetic spelling and re-run.
